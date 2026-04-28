@@ -31,7 +31,7 @@ python3 /opt/odoo/odoo-bin \
     --db_password="$PGPASSWORD" \
     -d "$PGDATABASE" \
     -i base \
-    --without-demo=all \
+    --without-demo=True \
     --stop-after-init || true
 
 # ---- Start Odoo ----
