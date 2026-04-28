@@ -29,8 +29,8 @@ RUN pip install -r requirements.txt
 COPY ./custom_addons /mnt/extra-addons
 
 # Copy config + entrypoint
-COPY docker/odoo.conf /etc/odoo/odoo.conf
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY odoo.conf /etc/odoo/odoo.conf
+COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 8069
