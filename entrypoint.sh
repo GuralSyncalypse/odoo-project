@@ -32,4 +32,5 @@ exec python3 /opt/odoo/odoo-bin \
     --db_password="$PGPASSWORD" \
     --addons-path="/opt/odoo/addons,/mnt/extra-addons" \
     --http-interface=0.0.0.0 \
-    --proxy-mode
+    --proxy-mode \
+    --init=base
