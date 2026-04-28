@@ -57,7 +57,7 @@ exec python3 /opt/odoo/odoo-bin \
     --db_port="$PGPORT" \
     --db_user="$PGUSER" \
     --db_password="$PGPASSWORD" \
-    -d "$DB_NAME" \
+    -d "$PGDATABASE" \
     --addons-path="/opt/odoo/addons,/mnt/extra-addons" \
     --http-interface=0.0.0.0 \
     --proxy-mode
