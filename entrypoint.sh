@@ -20,7 +20,7 @@ echo "✅ Database config:"
 echo "   Host: $PGHOST"
 echo "   Port: $PGPORT"
 echo "   User: $PGUSER"
-echo "   DB:   $DB_NAME"
+echo "   DB:   $PGDATABASE"
 
 # ---- Wait for Postgres ----
 echo "⏳ Waiting for PostgreSQL..."
