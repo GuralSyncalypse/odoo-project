@@ -2,8 +2,12 @@
 
 set -e
 
-echo "Starting Odoo 19..."
+echo "Starting Odoo..."
 
-cd /opt/odoo
-
-python3 odoo-bin -c /etc/odoo/odoo.conf
+python3 /opt/odoo/odoo-bin \
+    --db_host="$PGHOST" \
+    --db_port="$PGPORT" \
+    --db_user="$PGUSER" \
+    --db_password="$PGPASSWORD" \
+    --addons-path="/opt/odoo/addons,/mnt/extra-addons" \
+    --proxy-mode
