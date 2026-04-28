@@ -26,7 +26,7 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 # Copy your custom addons
-COPY ./custom_addons /mnt/extra-addons
+COPY ./extra-addons /mnt/extra-addons
 
 # Copy config + entrypoint
 COPY odoo.conf /etc/odoo/odoo.conf
