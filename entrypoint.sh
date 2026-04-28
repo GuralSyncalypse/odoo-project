@@ -6,7 +6,7 @@ echo "Starting Odoo..."
 
 python3 /opt/odoo/odoo-bin \
     --db_host="$PGHOST" \
-    --db_port="$PGPORT" \
+    --db_port="5432" \
     --db_user="$PGUSER" \
     --db_password="$PGPASSWORD" \
     --addons-path="/opt/odoo/addons,/mnt/extra-addons" \

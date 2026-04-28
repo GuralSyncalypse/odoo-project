@@ -62,4 +62,10 @@ EXPOSE 8069
 # =========================
 # Start Odoo
 # =========================
+# Create non-root user
+RUN useradd -m -d /home/odoo -s /bin/bash odoo \
+    && chown -R odoo:odoo /opt /mnt /etc/odoo
+
+USER odoo
+
 CMD ["/entrypoint.sh"]
