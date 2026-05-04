@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM odoo:19
 
 # =========================
 # System dependencies (IMPORTANT)
@@ -19,28 +19,6 @@ RUN apt-get update && apt-get install -y \
     node-less \
     npm \
     && rm -rf /var/lib/apt/lists/*
-
-# =========================
-# Workdir
-# =========================
-WORKDIR /opt
-
-# =========================
-# Clone Odoo 19 (Choice A)
-# =========================
-RUN git clone https://github.com/odoo/odoo.git --depth 1 --branch 19.0 odoo
-
-WORKDIR /opt/odoo
-
-# =========================
-# Upgrade pip first (important for build stability)
-# =========================
-RUN pip install --upgrade pip setuptools wheel
-
-# =========================
-# Install Odoo requirements (correct path)
-# =========================
-RUN pip install -r requirements.txt
 
 # =========================
 # Copy extra addons
