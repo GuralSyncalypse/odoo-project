@@ -22,6 +22,9 @@ echo "   User: $PGUSER"
 echo "   DB:   $PGDATABASE"
 
 # ---- Force init (will silently skip if already initialized) ----
+mkdir -p /data/odoo/sessions /data/odoo/filestore
+chmod -R 775 /data/odoo
+
 echo "⚙️ Running base module init (if applicable)..."
 
 odoo -c /etc/odoo/odoo.conf \
