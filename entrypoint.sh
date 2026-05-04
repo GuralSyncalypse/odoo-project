@@ -22,7 +22,13 @@ echo "   User: $PGUSER"
 echo "   DB:   $PGDATABASE"
 
 # ---- Force init (will silently skip if already initialized) ----
+# =========================
+# FIX RAILWAY VOLUME PERMS
+# =========================
 mkdir -p /data/odoo/sessions /data/odoo/filestore
+
+# IMPORTANT: Railway mounts as root → must fix ownership
+chown -R odoo:odoo /data/odoo
 chmod -R 775 /data/odoo
 
 echo "⚙️ Running base module init (if applicable)..."
