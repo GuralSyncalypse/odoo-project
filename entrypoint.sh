@@ -24,15 +24,11 @@ echo "   DB:   $PGDATABASE"
 # ---- Force init (will silently skip if already initialized) ----
 echo "⚙️ Running base module init (if applicable)..."
 
-odoo \
-    --db_host="$PGHOST" \
-    --db_port="$PGPORT" \
-    --db_user="$PGUSER" \
-    --db_password="$PGPASSWORD" \
+odoo -c /etc/odoo/odoo.conf \
     -d "$PGDATABASE" \
     -i base \
-    --without-demo=True \
-    --stop-after-init || true
+    --without-demo=all \
+    --stop-after-init
 
 # ---- Start Odoo ----
 echo "🚀 Launching Odoo server..."
