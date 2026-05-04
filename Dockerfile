@@ -16,6 +16,7 @@ COPY odoo.conf /etc/odoo/odoo.conf
 
 # Optional custom entrypoint
 COPY entrypoint.sh /entrypoint.sh
+RUN mkdir -p /data/odoo && chown -R odoo:odoo /data/odoo
 RUN chmod +x /entrypoint.sh
 
 # Fix permissions (ONLY what you added)
