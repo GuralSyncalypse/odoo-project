@@ -1,51 +1,28 @@
 FROM odoo:19
 
-# =========================
-# System dependencies (IMPORTANT)
-# =========================
 USER root
 
+# Only install extra deps IF your custom modules require them
 RUN apt-get update && apt-get install -y \
-    git \
-    gcc \
-    g++ \
-    python3-dev \
-    build-essential \
-    libpq-dev \
-    libxml2-dev \
-    libxslt1-dev \
     libldap2-dev \
     libsasl2-dev \
-    libjpeg-dev \
-    zlib1g-dev \
-    node-less \
-    npm \
     && rm -rf /var/lib/apt/lists/*
 
-# =========================
-# Copy extra addons
-# =========================
+# Copy custom addons
 COPY ./extra-addons /mnt/extra-addons
 
-# =========================
-# Config + entrypoint
-# =========================
+# Copy config
 COPY odoo.conf /etc/odoo/odoo.conf
+
+# Optional custom entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# =========================
-# Odoo port
-# =========================
-EXPOSE 8069
-
-# =========================
-# Start Odoo
-# =========================
-# Create non-root user
-RUN useradd -m -d /home/odoo -s /bin/bash odoo \
-    && chown -R odoo:odoo /opt /mnt /etc/odoo
+# Fix permissions (ONLY what you added)
+RUN chown -R odoo:odoo /mnt/extra-addons /etc/odoo /entrypoint.sh
 
 USER odoo
+
+EXPOSE 8069
 
 CMD ["/entrypoint.sh"]
