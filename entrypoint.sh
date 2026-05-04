@@ -24,7 +24,7 @@ echo "   DB:   $PGDATABASE"
 # ---- Force init (will silently skip if already initialized) ----
 echo "⚙️ Running base module init (if applicable)..."
 
-python3 /usr/bin/odoo/odoo-bin \
+odoo \
     --db_host="$PGHOST" \
     --db_port="$PGPORT" \
     --db_user="$PGUSER" \
@@ -37,12 +37,4 @@ python3 /usr/bin/odoo/odoo-bin \
 # ---- Start Odoo ----
 echo "🚀 Launching Odoo server..."
 
-exec python3 /usr/bin/odoo/odoo-bin \
-    --db_host="$PGHOST" \
-    --db_port="$PGPORT" \
-    --db_user="$PGUSER" \
-    --db_password="$PGPASSWORD" \
-    -d "$PGDATABASE" \
-    --addons-path="/usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons" \
-    --http-interface=0.0.0.0 \
-    --proxy-mode
+odoo -c /etc/odoo/odoo.conf
