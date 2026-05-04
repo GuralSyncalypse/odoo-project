@@ -23,7 +23,7 @@ class Customer(models.Model):
     previous_salesperson_ids = fields.Many2many(
         'sale.employee',
         string="Từng Được Chăm Bởi",
-        groups="sale_phones.group_ht_executive"
+        groups="ht_crm.group_ht_executive"
     )
 
     name = fields.Char(string="Tên khách")
@@ -57,7 +57,7 @@ class Customer(models.Model):
         string="Chăm Không Thành",
         default=False,
         store=True,
-        groups="sale_phones.group_ht_leader,sale_phones.group_ht_executive"
+        groups="ht_crm.group_ht_leader,ht_crm.group_ht_executive"
     )
 
 
