@@ -16,8 +16,16 @@ COPY odoo.conf /etc/odoo/odoo.conf
 
 # Optional custom entrypoint
 COPY entrypoint.sh /entrypoint.sh
-RUN mkdir -p /data/odoo && chown -R odoo:odoo /data/odoo
 RUN chmod +x /entrypoint.sh
+
+# =========================
+# Odoo persistent storage
+# =========================
+RUN mkdir -p /data/odoo \
+    && mkdir -p /data/odoo/sessions \
+    && mkdir -p /data/odoo/filestore \
+    && chown -R odoo:odoo /data/odoo \
+    && chmod -R 775 /data/odoo
 
 # Fix permissions (ONLY what you added)
 RUN chown -R odoo:odoo /mnt/extra-addons /etc/odoo /entrypoint.sh
