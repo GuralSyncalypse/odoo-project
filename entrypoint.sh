@@ -25,6 +25,10 @@ echo "   DB:   $PGDATABASE"
 echo "⚙️ Running base module init (if applicable)..."
 
 odoo -c /etc/odoo/odoo.conf \
+  --db_host="$PGHOST" \
+  --db_port="$PGPORT" \
+  --db_user="$PGUSER" \
+  --db_password="$PGPASSWORD" \
     -d "$PGDATABASE" \
     -i base \
     --without-demo=all \
@@ -33,4 +37,10 @@ odoo -c /etc/odoo/odoo.conf \
 # ---- Start Odoo ----
 echo "🚀 Launching Odoo server..."
 
-odoo -c /etc/odoo/odoo.conf
+exec odoo \
+  -c /etc/odoo/odoo.conf \
+  --db_host="$PGHOST" \
+  --db_port="$PGPORT" \
+  --db_user="$PGUSER" \
+  --db_password="$PGPASSWORD" \
+  -d "$PGDATABASE"
