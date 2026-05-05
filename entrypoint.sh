@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+mkdir -p /var/lib/odoo/.local
+chown -R odoo:odoo /var/lib/odoo
+
 echo "🚀 Starting Odoo..."
 
 # ---- Debug env ----
