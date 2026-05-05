@@ -18,8 +18,6 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # ensure directories exist
-USER odoo
-
 EXPOSE 8069
 
 CMD ["/entrypoint.sh"]
