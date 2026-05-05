@@ -1,9 +1,9 @@
 {
-    'name': "HT-CRM",
+    'name': "Telesales",
 
     'summary': "Short (1 phrase/line) summary of the module's purpose",
 
-    'description': """ Hỗ trợ HT
+    'description': """ Hỗ trợ sale phones
     """,
 
     'author': "HTLand",
@@ -17,8 +17,7 @@
 
     # any module necessary for this one to work correctly
     'depends': ['base'],
-    'installable': True,
-    
+
     # always loaded
     ''
     'data': [

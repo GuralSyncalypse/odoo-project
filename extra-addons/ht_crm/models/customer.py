@@ -6,11 +6,14 @@ class Customer(models.Model):
     _name = 'sale.customer'
     _description = 'Customer Information'
 
+    name = fields.Char(string="Tên khách")
+    email = fields.Char(string="Email")
+
     # Liên kết 1:N với bảng SĐT
     phonebook_ids = fields.One2many(
         "sale.phonebook",
         "customer_id",
-        string="Phonebook Entries"
+        string="Số Điện Thoại"
     )
 
     # Sales đang chăm 
@@ -23,11 +26,8 @@ class Customer(models.Model):
     previous_salesperson_ids = fields.Many2many(
         'sale.employee',
         string="Từng Được Chăm Bởi",
-        groups="ht_crm.group_ht_executive"
+        groups="sale_phones.group_ht_executive"
     )
-
-    name = fields.Char(string="Tên khách")
-    email = fields.Char(string="Email")
 
     source = fields.Selection([
         ('facebook', 'Facebook'),
@@ -50,14 +50,14 @@ class Customer(models.Model):
         ('blocked', 'Blocked'),
         ('potential', 'Tiềm năng'),
         ('vip', 'Nét'),
-    ], default='active')
+    ], string="Trạng Thái", default='active')
     
     # Biến đánh dấu khách chăm thất bại
     ignore = fields.Boolean(
         string="Chăm Không Thành",
         default=False,
         store=True,
-        groups="ht_crm.group_ht_leader,ht_crm.group_ht_executive"
+        groups="sale_phones.group_ht_leader,sale_phones.group_ht_executive"
     )
 
 
