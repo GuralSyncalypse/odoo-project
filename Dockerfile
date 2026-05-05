@@ -18,7 +18,9 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # ensure directories exist
-RUN mkdir -p /var/lib/odoo /mnt/extra-addons /etc/odoo
+RUN mkdir /mnt/extra-addons /etc/odoo
+
+USER odoo
 
 EXPOSE 8069
 
