@@ -1,26 +1,24 @@
 FROM odoo:19
 
 USER root
+
 RUN apt-get update && apt-get install -y \
     libldap2-dev \
     libsasl2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-    
-# Copy custom addons
+# custom addons
 COPY ./extra-addons /mnt/extra-addons
 
-# Copy config
+# config
 COPY odoo.conf /etc/odoo/odoo.conf
 
-# Optional custom entrypoint
+# entrypoint
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Fix permissions (ONLY what you added)
-RUN chown -R odoo:odoo /mnt/extra-addons /etc/odoo /entrypoint.sh
-
-USER odoo
+# ensure directories exist
+RUN mkdir -p /var/lib/odoo /mnt/extra-addons /etc/odoo
 
 EXPOSE 8069
 
