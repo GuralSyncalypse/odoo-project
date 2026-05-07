@@ -90,7 +90,7 @@
         <field name="model">sale.phonebook</field>
         <field name="arch" type="xml">
             <list>
-                <field name="customer_id" string="Tên khách hàng" readonly="True"/>
+                <field name="customer_id" string="Tên khách hàng" readonly="True" width="auto"/>
                 <field name="phone" widget="phone"/>
                 <field name="is_called"/>
                 <field name="unreachable"/>
