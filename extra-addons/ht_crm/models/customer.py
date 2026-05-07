@@ -6,7 +6,16 @@ class Customer(models.Model):
     _name = 'sale.customer'
     _description = 'Customer Information'
 
-    name = fields.Char(string="Tên khách")
+    # Các trường cơ bản
+    partner_platform = fields.Char(string="Sàn Liên Kết")
+    name = fields.Char(string="Tên Khách")
+    date_of_birth = fields.Date(string="Ngày Sinh")
+    id_number = fields.Char(string="CMND / Passport")
+    issue_date = fields.Date(string="Ngày cấp")
+    issue_place = fields.Char(string="Nơi cấp")
+    permanent_address = fields.Text(string="Địa chỉ thường trú")
+    contact_address = fields.Text(string="Địa chỉ liên lạc")
+
     email = fields.Char(string="Email")
 
     # Liên kết 1:N với danh sách số điện thoại
@@ -19,7 +28,8 @@ class Customer(models.Model):
     # Nhân viên đang phụ trách
     salesperson_id = fields.Many2one(
         'sale.employee',
-        string="Nhân viên phụ trách"
+        string="Nhân viên phụ trách",
+        domain=[('role_ids.code', '=', 'sales')]
     )
 
     # Danh sách nhân viên đã từng phụ trách
@@ -63,6 +73,9 @@ class Customer(models.Model):
     # Dự án khách hàng quan tâm
     project_ids = fields.Many2many(
         'estate.project',
+        'estate_project_interested_rel',
+        'customer_id',
+        'project_id',
         string="Dự án quan tâm"
     )
 

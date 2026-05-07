@@ -18,6 +18,143 @@
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="groups" eval="[(4, ref('base.group_system'))]"/>
     </record> -->
+    <record id="rule_estate_project_user" model="ir.rule">
+        <field name="name">User - (Estate Project)</field>
+        <field name="model_id" ref="model_estate_project"/>
+        <field name="domain_force">
+            [
+                (
+                    'sales_ids.user_id',
+                    'in',
+                    [user.id]
+                )
+            ]
+        </field>
+        <field name="groups" eval="[(4, ref('group_ht_user'))]"/>
+    </record>
+
+    <record id="rule_estate_property_unit_user" model="ir.rule">
+        <field name="name">User - (Property Unit)</field>
+        <field name="model_id" ref="model_estate_property_unit"/>
+        <field name="domain_force">
+            [
+                (
+                    'project_id.sales_ids.user_id',
+                    'in',
+                    [user.id]
+                )
+            ]
+        </field>
+        <field name="groups" eval="[(4, ref('group_ht_user'))]"/>
+    </record>
+
+    <record id="view_estate_project_form" model="ir.ui.view">
+        <field name="name">estate.project.form</field>
+        <field name="model">estate.project</field>
+        <field name="arch" type="xml">
+            <form string="Dự án Bất động sản">
+                <sheet>
+
+                    <!-- HEADER -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Tên dự án..."/>
+                        </h1>
+                    </div>
+
+                    <!-- BASIC INFO -->
+                    <group>
+                        <group string="Thông tin chung">
+                            <field name="investor"/>
+                            <field name="location"/>
+                            <field name="area"/>
+                            <field name="price_per_m2"/>
+                        </group>
+
+                        <group string="Trạng thái">
+                            <field name="legal_status"/>
+                            <field name="progress"/>
+                        </group>
+                    </group>
+
+                    <!-- NOTE -->
+                    <group>
+                        <field name="note" placeholder="Ghi chú..." nolabel="1"/>
+                    </group>
+
+                    <!-- RELATIONS -->
+                    <notebook>
+
+                        <page string="Khách Hàng">
+                            <header>
+                                <button name="action_clear_interested_customers"
+                                        type="object"
+                                        string="Xóa KH quan tâm"
+                                        class="btn-secondary"/>
+
+                                <button name="action_clear_purchased_customers"
+                                        type="object"
+                                        string="Xóa KH đã mua"
+                                        class="btn-danger"/>
+                            </header>
+                            <group>
+                                <field name="interested_customer_ids">
+                                    <list editable="bottom" limit="10">
+                                        <field name="name"/>
+                                        <field name="source"/>
+                                        <field name="type"/>
+                                    </list>
+                                </field>
+                                <field name="purchased_customer_ids">
+                                    <list editable="bottom" limit="10">
+                                        <field name="name"/>
+                                        <field name="source"/>
+                                        <field name="type"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+
+
+                        <page string="Sales phụ trách">
+                            <group>
+                                <field name="sales_ids" string="">
+                                    <list editable="bottom" limit="5">
+                                        <field name="name"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+
+                        <page string="Rổ Hàng">
+                            <group>
+                                <field name="unit_ids" string="">
+                                    <list limit="5" editable="bottom">
+
+                                        <field name="product_code"/>
+                                        <field name="block"/>
+                                        <field name="floor"/>
+
+                                        <field name="unit_number"/>
+                                        <field name="unit_type_id"/>
+
+                                        <field name="net_area"/>
+                                        <field name="gross_area"/>
+
+                                        <field name="priority"/>
+                                        <field name="booking_code"/>
+
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+
+                    </notebook>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
 
     <!-- List view -->
     <record id="view_estate_project_list" model="ir.ui.view">
@@ -32,6 +169,43 @@
                 <field name="price_per_m2"/>
                 <field name="legal_status"/>
                 <field name="progress"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_estate_property_unit_list" model="ir.ui.view">
+        <field name="name">estate.property.unit.list</field>
+        <field name="model">estate.property.unit</field>
+        <field name="arch" type="xml">
+            <list>
+
+                <field name="product_code"/>
+                <field name="project_id"/>
+                <field name="block"/>
+                <field name="floor"/>
+                <field name="unit_number"/>
+
+                <field name="unit_type_id"/>
+                <field name="net_area"/>
+                <field name="gross_area"/>
+
+                <field name="price"/>
+                <field name="state"/>
+
+            </list>
+        </field>
+    </record>
+
+    <record id="view_estate_property_unit_type_list" model="ir.ui.view">
+        <field name="name">estate.property.unit.type.list</field>
+        <field name="model">estate.property.unit.type</field>
+        <field name="arch" type="xml">
+            <list>
+
+                <field name="name"/>
+                <field name="code"/>
+                <field name="description"/>
+
             </list>
         </field>
     </record>
