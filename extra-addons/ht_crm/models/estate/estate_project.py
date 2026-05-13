@@ -13,10 +13,17 @@ class EstatePropertyUnit(models.Model):
     _name = 'estate.property.unit'
     _description = 'Căn hộ / Sản phẩm bất động sản'
 
-    name = fields.Char(
-        related='product_code',
-        store=True,
-        string='Sản phẩm'
+    currency_id = fields.Many2one(
+        'res.currency',
+        default=lambda self: self.env.company.currency_id
+    )
+
+    name = fields.Char(string="Tên căn", size=50)
+
+    product_code = fields.Char(
+        string="Mã sản phẩm",
+        compute="_compute_product_code",
+        store=True
     )
     project_id = fields.Many2one(
         'estate.project',
@@ -25,16 +32,9 @@ class EstatePropertyUnit(models.Model):
         ondelete='cascade'
     )
 
-    block = fields.Char(string="Block", size=5)
+    block = fields.Char(string="Block", size=20)
     floor = fields.Integer(string="Tầng")
     unit_number = fields.Integer(string="Căn hộ số", required=True)
-
-    product_code = fields.Char(
-        string="Mã sản phẩm",
-        compute="_compute_product_code",
-        store=False,
-        required=True
-    )
 
     unit_type_id = fields.Many2one(
         'estate.property.unit.type',
@@ -49,7 +49,7 @@ class EstatePropertyUnit(models.Model):
     booking_code = fields.Char(string="Mã VBTT đặt mua")
 
     # Trường bổ sung
-    price = fields.Float(string="Giá bán")
+    price = fields.Monetary(string="Giá bán", currency_field="currency_id")
     state = fields.Selection([
         ('available', 'Còn trống'),
         ('reserved', 'Giữ chỗ'),
@@ -73,10 +73,6 @@ class EstatePropertyUnit(models.Model):
                 rec.product_code = ""
 
     # Ràng buộc
-    _sql_constraints = [
-        ('product_code_unique', 'unique(product_code)', 'Mã sản phẩm phải duy nhất!')
-    ]
-    
     @api.constrains('floor')
     def _check_floor_non_negative(self):
         for rec in self:

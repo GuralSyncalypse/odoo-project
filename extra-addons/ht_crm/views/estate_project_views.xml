@@ -18,6 +18,13 @@
         <field name="domain_force">[(1, '=', 1)]</field>
         <field name="groups" eval="[(4, ref('base.group_system'))]"/>
     </record> -->
+    <record id="rule_estate_project_exec" model="ir.rule">
+        <field name="name">Ban Điều Hành - (Estate Project)</field>
+        <field name="model_id" ref="model_estate_project"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('group_ht_user'))]"/>
+    </record>
+
     <record id="rule_estate_project_user" model="ir.rule">
         <field name="name">User - (Estate Project)</field>
         <field name="model_id" ref="model_estate_project"/>
@@ -142,7 +149,7 @@
                                 <field name="unit_ids" string="">
                                     <list limit="5" editable="bottom">
 
-                                        <field name="product_code"/>
+                                        <field name="name"/>
                                         <field name="block"/>
                                         <field name="floor"/>
 
@@ -190,7 +197,7 @@
         <field name="arch" type="xml">
             <list>
 
-                <field name="product_code"/>
+                <field name="name"/>
                 <field name="project_id"/>
                 <field name="block"/>
                 <field name="floor"/>

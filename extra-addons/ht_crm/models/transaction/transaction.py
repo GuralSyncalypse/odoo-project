@@ -1,45 +1,83 @@
 from odoo import models, fields, api, exceptions
+from datetime import date
 
 class Transaction(models.Model):
     _name = 'sale.transaction'
     _description = "Transaction Information"
 
-    employee_id = fields.Many2one('sale.employee', domain=[('role_ids.code', '=', 'sales')])
-    customer_id = fields.Many2one("sale.customer")
-    product_id = fields.Many2one('estate.property.unit', domain=[('state', 'in', ['available', 'resale'])])
-    date = fields.Date(default=fields.Date.today)
-
-    value = fields.Float(
-        string="Giá giao dịch",
-        compute="_compute_value",
-        store=True,
-        digits=(16, 0)
+    name = fields.Char(
+        string='Mã giao dịch',
+        required=True,
+        copy=False,
+        readonly=True,
+        default='New'
     )
-    listed_price = fields.Float(string="Giá niêm yết")
+
+    currency_id = fields.Many2one(
+        'res.currency',
+        default=lambda self: self.env.company.currency_id
+    )
+
+    employee_id = fields.Many2one('sale.employee', string="Sales", domain=[('role_ids.code', '=', 'sales')])
+    customer_id = fields.Many2one("sale.customer", string="Khách hàng")
+    
+    date = fields.Date(default=fields.Date.today, string="Ngày giao dịch")
+
+    # Thông tiên liên quan về SP
+    product_id = fields.Many2one('estate.property.unit', string="Tên SP", domain=[('state', 'in', ['available', 'resale'])])
+    net_area = fields.Float(
+        related="product_id.net_area",
+        string="DTTT (m²)",
+        store=True,
+        readonly=True
+    )
+
+    gross_area = fields.Float(
+        related="product_id.gross_area",
+        string="DTLL (m²)",
+        store=True,
+        readonly=True
+    )
+
+    # BI
+    price_total = fields.Monetary(
+        string="Giá đã VAT",
+        currency_field="currency_id",
+        compute="_compute_final_price",
+        store=True
+    )
+
+    # Trường bổ sung
+    price_subtotal = fields.Monetary(
+        currency_field="currency_id",
+        related="product_id.price",
+        string="Giá chưa VAT",
+        store=True,
+        readonly=True
+    )
+    
     discount = fields.Float(
         string="Chiết khấu (%)",
         default=0,
         digits=(16, 1)
     )
 
-    _tracking = True
+    state = fields.Selection([
+        ('booking', 'Giữ chỗ'),
+        ('deposit', 'Đặt cọc')
+    ], string="Trạng thái", default='booking')
 
-    @api.onchange('product_id')
-    def _onchange_product_id(self):
-        for rec in self:
-            rec.listed_price = rec.product_id.price
+    @api.constrains('discount')
+    def _check_discount(self):
+        for record in self:
+            if record.discount < 0 or record.discount > 100:
+                raise exceptions.ValidationError("Chiết khấu phải nằm trong khoảng từ 0 đến 100%.")
 
-    @api.depends('listed_price', 'discount')
-    def _compute_value(self):
+    @api.depends('price_subtotal', 'discount')
+    def _compute_final_price(self):
         for rec in self:
-            discount_amount = rec.listed_price * (rec.discount / 100)
-            rec.value = rec.listed_price - discount_amount
-
-    @api.constrains('value')
-    def _check_value(self):
-        for rec in self:
-            if rec.value < 0:
-                raise exceptions.ValidationError(("Giá trị giao dịch (%s) phải >= 0") % rec.value)
+            discount_amount = rec.price_subtotal * (rec.discount / 100)
+            rec.price_total = rec.price_subtotal - discount_amount
 
     def _get_kpi(self, employee_id, month, year):
         return self.env['sale.employee.kpi'].search([
@@ -84,20 +122,29 @@ class Transaction(models.Model):
             })
 
     # ================= CREATE =================
-    @api.model
-    def create(self, vals):
-        record = super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
 
-        if record.employee_id and record.date:
-            self._increase_kpi(
-                record.employee_id.id,
-                record.date.month,
-                record.date.year,
-                record.value
-            )
+        for vals in vals_list:
+            if vals.get('name', 'New') == 'New':
+                vals['name'] = self.env['ir.sequence'].next_by_code(
+                    'sale.transaction'
+                ) or 'New'
 
-        return record
+        records = super().create(vals_list)
 
+        for record in records:
+            if record.employee_id and record.date:
+                date = fields.Date.from_string(record.date)
+
+                self._increase_kpi(
+                    record.employee_id.id,
+                    date.month,
+                    date.year,
+                    record.price_total
+                )
+
+        return records
 
     # ================= UNLINK =================
     def unlink(self):
@@ -107,7 +154,7 @@ class Transaction(models.Model):
                     record.employee_id.id,
                     record.date.month,
                     record.date.year,
-                    record.value
+                    record.price_total
                 )
 
         return super().unlink()
@@ -121,7 +168,7 @@ class Transaction(models.Model):
                 'employee_id': rec.employee_id.id,
                 'month': rec.date.month if rec.date else False,
                 'year': rec.date.year if rec.date else False,
-                'value': rec.value,
+                'value': rec.price_total,
             }
             for rec in self
         }
@@ -148,8 +195,7 @@ class Transaction(models.Model):
                     rec.employee_id.id,
                     rec.date.month,
                     rec.date.year,
-                    rec.value
+                    rec.price_total
                 )
-
         return res
     
