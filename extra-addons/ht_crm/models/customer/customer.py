@@ -1,6 +1,7 @@
 from odoo import models, fields, api
-import datetime as dt
-import random
+import xlsxwriter
+from io import BytesIO
+
 
 class Customer(models.Model):
     _name = 'sale.customer'
@@ -48,14 +49,6 @@ class Customer(models.Model):
         ('company', 'Doanh nghiệp'),
     ], string="Phân loại khách")
 
-    state = fields.Selection([
-        ('active', 'Đang chăm sóc'),
-        ('inactive', 'Ngừng liên hệ'),
-        ('blocked', 'Chặn'),
-        ('potential', 'Tiềm năng'),
-        ('vip', 'Khách VIP'),
-    ], string="Trạng thái", default='active')
-
     # Đánh dấu khách chăm sóc không thành công
     ignore = fields.Boolean(
         string="Chăm sóc không thành",
@@ -73,6 +66,11 @@ class Customer(models.Model):
         string="Dự án quan tâm"
     )
 
+    transaction_ids = fields.One2many(
+        'sale.transaction',
+        'customer_id',
+        string='Giao dịch'
+    )
     
 
     @api.onchange('ignore')
