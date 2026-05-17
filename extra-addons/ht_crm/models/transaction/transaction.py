@@ -39,13 +39,20 @@ class Transaction(models.Model):
         readonly=True
     )
 
-    # BI
+    # % chiết khấu
+    discount = fields.Float(
+        string="Chiết khấu (%)",
+        default=0,
+        digits=(16, 1)
+    )
+
+    # Giá cuối cùng sau CK
     price_total = fields.Monetary(
-        string="Giá đã VAT",
+        string="Giá sau VAT",
         currency_field="currency_id",
         compute="_compute_final_price",
         store=True,
-        digits=(16, 2)
+        digits=(16, 0)
     )
 
     # Trường bổ sung
@@ -55,13 +62,7 @@ class Transaction(models.Model):
         string="Giá niêm yết",
         store=True,
         readonly=True,
-        digits=(16, 2)
-    )
-    
-    discount = fields.Float(
-        string="Chiết khấu (%)",
-        default=0,
-        digits=(16, 1)
+        digits=(16, 0)
     )
 
     state = fields.Selection([
