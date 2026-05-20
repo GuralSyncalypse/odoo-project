@@ -54,7 +54,7 @@
                     <!-- RELATIONS -->
                     <notebook>
 
-                        <page string="Data">
+                        <page string="Data" groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive">
                             <group>
                                 <field name="phonebook_ids" string="">
                                     <list editable="bottom" limit="20">
@@ -66,29 +66,16 @@
                         </page>
                         
                         <page string="Khách Hàng">
-                            <header>
-                                <button name="action_clear_interested_customers"
-                                        type="object"
-                                        string="Xóa KH quan tâm"
-                                        class="btn-secondary"/>
-
-                                <button name="action_clear_purchased_customers"
-                                        type="object"
-                                        string="Xóa KH đã mua"
-                                        class="btn-danger"/>
-                            </header>
                             <group>
                                 <field name="interested_customer_ids">
                                     <list editable="bottom" limit="10">
                                         <field name="name"/>
-                                        <field name="source"/>
                                         <field name="type"/>
                                     </list>
                                 </field>
                                 <field name="purchased_customer_ids">
                                     <list editable="bottom" limit="10">
                                         <field name="name"/>
-                                        <field name="source"/>
                                         <field name="type"/>
                                     </list>
                                 </field>
@@ -96,14 +83,9 @@
                         </page>
 
 
-                        <page string="Sales phụ trách">
+                        <page string="Sales phụ trách" groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive">
                             <group>
-                                <field name="sales_ids" string="">
-                                    <list editable="bottom" limit="5">
-                                        <field name="sales_id" />
-                                        <field name="batch_id"/>
-                                    </list>
-                                </field>
+                                <field name="unique_sales_ids" string=""/>
                             </group>
                         </page>
 
@@ -125,6 +107,17 @@
                                         <field name="priority"/>
                                         <field name="booking_code"/>
 
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+
+                        <page string="Ưu đãi">
+                            <group>
+                                <field name="promotion_ids" string="">
+                                    <list limit="5" editable="bottom">
+                                        <field name="name"/>
+                                        <field name="promotion_type"/>
                                     </list>
                                 </field>
                             </group>

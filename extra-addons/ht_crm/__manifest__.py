@@ -17,6 +17,12 @@
     # any module necessary for this one to work correctly
     'depends': ['base', 'web'],
 
+    'assets': {
+        'web.assets_backend': [
+            'ht_crm/static/src/css/phonebook.css',
+        ],
+    },
+
     # always loaded
     'data': [
         'views/groups.xml',
@@ -28,8 +34,10 @@
         'views/rules/sale_phonebook.xml',
         'views/rules/sale_transaction.xml',
         'views/estate_project_view.xml',
+        'views/estate_project_promotion_view.xml',
         'views/sale_customer_view.xml',
         'views/sale_phonebook_view.xml',
+        'views/sale_phonebook_batch_view.xml',
         'views/sale_transaction_view.xml',
         'views/sale_employee_view.xml',
         'views/action_reports.xml',
