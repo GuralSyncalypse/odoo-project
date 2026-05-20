@@ -35,22 +35,22 @@ class PhonebookBatch(models.Model):
         ('failed', 'Lỗi')
     ], default='draft')
     distribute_at = fields.Datetime(string="Phân phát lúc", compute='_compute_distribute_at', store=True)
-    rest = fields.Integer(
+    rest_time = fields.Integer(
         string="Nghỉ (phút)",
         default=2
     )
 
-    @api.depends("rest")
+    @api.depends("rest_time")
     def _compute_distribute_at(self):
         now = fields.Datetime.now()
 
         for rec in self:
-            if not rec.rest:
+            if not rec.rest_time:
                 rec.distribute_at = False
                 continue
 
             rec.distribute_at = now + datetime.timedelta(
-                minutes=rec.rest
+                minutes=rec.rest_time
             )
 
     @api.model
@@ -72,11 +72,19 @@ class PhonebookBatch(models.Model):
 
             batch.action_distribute()
 
-            if batch.rest:
+            if batch.rest_time:
                 batch.distribute_at = now + datetime.timedelta(
-                    minutes=batch.rest
+                    minutes=batch.rest_time
                 )
 
+
+    def action_redistribute(self):
+        self.write({'state': 'processing'})
+        available_phones = self.phone_ids.filtered(lambda p: p.is_hot)
+        
+        for phone in available_phones:
+            phone.write({'salesperson_id': False})
+            phone.write({'previous_salesperson_ids': False})
 
     def action_clean_invalid(self):
         invalid_phones = self.phone_ids.filtered(lambda p: p.is_hot and p.status == 'invalid')
@@ -90,7 +98,6 @@ class PhonebookBatch(models.Model):
         for phone in available_phones:
             phone.write({'salesperson_id': False})
         
-
     def action_distribute(self):
         self.ensure_one()
         
@@ -139,6 +146,14 @@ class PhonebookBatch(models.Model):
 class PhoneBook(models.Model):
     _name = 'sale.phonebook'
     _description = 'DATA danh bạ'
+    _order = "status"
+
+    # Định danh
+    batch_id = fields.Many2one(
+        'sale.phonebook.batch',
+        string="Tập dữ liệu",
+        groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
+    )
 
     # Định danh
     batch_id = fields.Many2one(
@@ -151,18 +166,24 @@ class PhoneBook(models.Model):
     name = fields.Char(string="Chủ thuê bao")
     phone = fields.Char(string="Số điện thoại", size=15, required=True)
     note = fields.Text(string="Ghi chú")
+    note_preview = fields.Char(
+        string="Ghi chú",
+        compute="_compute_note_preview",
+        store=False
+    )
     created_on = fields.Datetime(
         string="Ngày tạo số",
         default=fields.Datetime.now
     )
     
     # Trường bổ sung
-    project_id = fields.Many2one(related='batch_id.project_id')
+    project_id = fields.Many2one(related='batch_id.project_id', string="Dự án")
 
     salesperson_id = fields.Many2one(
         'sale.employee',
         string="Sales phụ trách",
-        domain=[('role_ids.code', '=', 'sales')]
+        domain=[('role_ids.code', '=', 'sales')],
+        groups="ht_crm.group_ht_executive, ht_crm.group_ht_general_admin"
     )
 
     previous_salesperson_ids = fields.Many2many(
@@ -176,7 +197,7 @@ class PhoneBook(models.Model):
         ('callback', 'Gọi lại'),
         ('contacted', 'Đã liên hệ'),
         ('invalid', 'Không hợp lệ / Hủy')
-    ], string="Trạng thái", default='new', store=True)
+    ], string="Trạng thái", default='new', store=True, group_expand='_group_expand_status')
 
     # Trường xử lý số nóng.
     is_hot = fields.Boolean(string="Nóng?", default=False)
@@ -194,8 +215,48 @@ class PhoneBook(models.Model):
                 raise exceptions.UserError(
                     "Bạn chỉ được sửa ghi chú và trạng thái."
                 )
+            
+        if self.env.user.has_group('ht_crm.group_ht_user'):
+            person = vals.get('salesperson_id')
+
+            if person:
+                salesperson = self.env['sale.employee'].browse(person)
+
+                if self.env.user != salesperson.user_id:
+                    raise exceptions.UserError(
+                        "Số này đã bị thu hồi."
+                    )
 
         return super().write(vals)
+
+    @api.depends('note')
+    def _compute_note_preview(self):
+        for rec in self:
+            if rec.note:
+                rec.note_preview = (
+                    rec.note[:30] + '...'
+                    if len(rec.note) > 30
+                    else rec.note
+                )
+            else:
+                rec.note_preview = False
+
+    def action_open_status_wizard(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Đổi trạng thái',
+            'res_model': 'sale.phonebook.status.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_phonebook_id': self.id,
+                'default_status': self.status,
+            }
+        }
+
+    @api.model
+    def _group_expand_status(self, statuses, domain):
+        return [key for key, val in type(self).status.selection]
 
     @api.constrains('phone')
     def _check_phone_unique(self):
@@ -220,22 +281,18 @@ class PhoneBook(models.Model):
         self.write({'previous_salesperson_ids': [(5, 0, 0)]})
 
 
-class PhoneBookLog(models.Model):
-    _name = "sale.phonebook.log"
-    _description = "Log thao tác"
-    _order = "create_date desc"
+class PhonebookStatusWizard(models.TransientModel):
+    _name = 'sale.phonebook.status.wizard'
+    _description = 'Đổi trạng thái'
 
-    phonebook_id = fields.Many2one(
-        "sale.phonebook",
-        required=True,
-        ondelete="cascade"
-    )
+    phonebook_id = fields.Many2one('sale.phonebook')
 
-    user_id = fields.Many2one(
-        "res.users",
-        default=lambda self: self.env.user
-    )
+    status = fields.Selection([
+        ('new', 'Chưa liên hệ'),
+        ('callback', 'Gọi lại'),
+        ('contacted', 'Đã liên hệ'),
+        ('invalid', 'Không hợp lệ / Hủy')
+    ], string="Trạng thái", default='new')
 
-    action = fields.Char(required=True)
-
-    note = fields.Text()
+    def action_confirm(self):
+        self.phonebook_id.status = self.status

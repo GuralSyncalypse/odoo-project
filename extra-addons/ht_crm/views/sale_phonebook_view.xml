@@ -1,20 +1,114 @@
 <odoo>
+    <record id="view_phonebook_status_wizard" model="ir.ui.view">
+        <field name="name">sale.phonebook.status.wizard.form</field>
+        <field name="model">sale.phonebook.status.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Đổi trạng thái">
+
+                <group>
+                    <field name="status"/>
+                </group>
+
+                <footer>
+
+                    <button name="action_confirm"
+                            type="object"
+                            string="Xác nhận"
+                            class="btn-primary"/>
+
+                    <button string="Hủy"
+                            special="cancel"/>
+
+                </footer>
+
+            </form>
+        </field>
+    </record>
+    
     <record id="view_phonebook_list" model="ir.ui.view">
         <field name="name">sale.phonebook.list</field>
         <field name="model">sale.phonebook</field>
         <field name="arch" type="xml">
             <list>
-                <field name="batch_id"/>
+                <field name="batch_id" groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"/>
 
-                <field name="created_on" readonly="True"/>
-                <field name="name" readonly="True"/>
-                <field name="phone" widget="phone"/>
-                <field name="status"/>
-                <field name="note"/>
+                <field name="created_on" optional="1" readonly="True"/>
+                <field name="name" readonly="True" class="col-name"/>
+                <field name="phone" widget="phone" class="col-phone"/>
+                <field name="status" class="col-status"/>
+                <field name="note" class="col-note"/>
 
                 <!-- Trường bổ sung -->
                 <field name="salesperson_id" optional="1" groups="ht_crm.group_ht_executive,ht_crm.group_ht_general_admin,ht_crm.group_ht_leader"/>
+                
             </list>  
+        </field>
+    </record>
+
+    <record id="view_phonebook_kanban" model="ir.ui.view">
+        <field name="name">sale.phonebook.kanban</field>
+        <field name="model">sale.phonebook</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="status">
+                <templates>
+                    <t t-name="card">
+
+                        <div class="oe_kanban_card rounded-4 shadow-sm p-3">
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+
+                            
+                                <div>
+
+                                    <!-- Customer Name -->
+                                    <div class="fw-semibold text-dark fs-6">
+                                        <field name="name"/>
+                                    </div>
+
+                                    <!-- Phone -->
+                                    <div class="fw-bold fs-4 text-primary">
+                                        <field name="phone" widget="phone"/>
+                                    </div>
+
+                                </div>
+
+                                <!-- Status -->
+                                <div>
+                                    <field name="status" widget="badge"/>
+                                </div>
+                            </div>
+                            
+
+                            <!-- Note -->
+                            <div class="bg-light rounded-3 px-2 py-2 small text-secondary mb-3">
+
+                                <div class="fw-semibold text-dark mb-1">
+                                    Ghi chú
+                                </div>
+
+                                <field name="note_preview"/>
+
+                            </div>
+
+                            <!-- Action -->
+                            <footer>
+
+                                <button name="action_open_status_wizard"
+                                        type="object"
+                                        icon="fa-refresh"
+                                        string="Đổi trạng thái"
+                                        class="btn btn-primary btn-sm w-100"
+                                        groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
+
+                                />
+
+                            </footer>
+
+                        </div>
+
+                    </t>
+                </templates>
+            </kanban>
         </field>
     </record>
 
@@ -58,11 +152,10 @@
 
                     <group>
                         <group string="Thông Tin Data">
-                            <field name="batch_id"/>
+                            <field name="batch_id" groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"/>
                             <field name="created_on" readonly="1"/>
 
-                            <field name="salesperson_id"
-                                options="{'no_create': False}"/>
+                            <field name="salesperson_id" options="{'no_create': False}" groups="ht_crm.group_ht_executive,ht_crm.group_ht_general_admin"/>
                             <field name="project_id"/>
                             <field name="previous_salesperson_ids" groups="base.group_system,ht_crm.group_ht_general_admin,ht_crm.group_ht_executive,ht_crm.group_ht_leader"/>
 
@@ -72,7 +165,6 @@
                             <field name="is_hot" widget="boolean" groups="base.group_system,ht_crm.group_ht_general_admin,ht_crm.group_ht_executive,ht_crm.group_ht_leader"/>
                             <field name="status"/>
                             <field name="note" placeholder="Ghi chú..."/>
-
                         </group>
                     </group>
 
@@ -90,125 +182,6 @@
                 </sheet>
 
             </form>
-        </field>
-    </record>
-
-    <record id="view_sale_phonebook_log_list" model="ir.ui.view">
-        <field name="name">sale.phonebook.log.list</field>
-        <field name="model">sale.phonebook.log</field>
-        <field name="arch" type="xml">
-            <list string="Logs" create="false">
-                <field name="create_date" string="Thời gian"/>
-                <field name="user_id" string="Người thao tác"/>
-                <field name="phonebook_id" string="Bị tác động"/>
-                <field name="action" string="Hành động"/>
-                <field name="note" string="Ghi chú"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="ir_cron_distribute_hot" model="ir.cron">
-        <field name="name">Distribute Hot</field>
-        <field name="model_id" ref="model_sale_phonebook_batch"/>
-        <field name="state">code</field>
-        <field name="code">model.cron_distribute()</field>
-        <field name="interval_number">1</field>
-        <field name="interval_type">minutes</field>
-        <field name="active">True</field>
-    </record>
-
-    <record id="view_phonebook_batch_list" model="ir.ui.view">
-        <field name="name">sale.phonebook.batch.list</field>
-        <field name="model">sale.phonebook.batch</field>
-        <field name="arch" type="xml">
-            <list>
-                <field name="name" string="Thời gian"/>
-                <field name="date" string="Người thao tác"/>
-                <field name="project_id" string="Dự án"/>
-                <field name="state"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_phonebook_batch_form" model="ir.ui.view">
-        <field name="name">sale.phonebook.batch.form</field>
-        <field name="model">sale.phonebook.batch</field>
-        <field name="arch" type="xml">
-
-            <form string="Phonebook Batch">
-                <header>
-                    <button name="action_distribute"
-                            string="Phân phát"
-                            type="object"
-                            class="oe_highlight"
-                            icon="fa-random"
-                            groups="ht_crm.group_ht_executive,base.group_system"/>
-
-                    <button name="action_remove_sales"
-                            string="Reset sales"
-                            type="object"
-                            class="oe_highlight"
-                            icon="fa-undo"
-                            groups="ht_crm.group_ht_executive,base.group_system"/>
-
-                    <button name="action_clean_invalid"
-                            string="Xóa số không hợp lệ"
-                            type="object"
-                            class="oe_highlight"
-                            icon="fa-broom"
-                            groups="ht_crm.group_ht_executive,base.group_system"/>
-                </header>
-                    
-                <sheet>
-
-                    <group>
-                        <field name="name"/>
-                        <field name="date"/>
-                        <field name="project_id"/>
-                        <field name="state"/>
-                        <field name="chunk_size"/>
-                        <field name="distribute_at"/>
-                        <field name="rest" string="Thời gian nghỉ (phút)"/>
-                    </group>
-
-                    <notebook>
-                        <page string="Danh sách số điện thoại">
-
-                            <field name="phone_ids"
-                                options="{'no_create': True, 'no_create_edit': True}">
-
-                                <list editable="bottom">
-                                    <field name="name"/>
-                                    <field name="phone"/>
-                                    <field name="salesperson_id"/>
-                                    <field name="is_hot"/>
-                                </list>
-
-                                <!-- <form>
-                                    <group>
-                                        <field name="name"/>
-                                        <field name="phone"/>
-                                    </group>
-                                </form> -->
-
-                            </field>
-
-                        </page>
-
-                        <page string="Sales phụ trách">
-
-                            <field name="e_p_rel_ids">
-                                <list>
-                                    <field name="sales_id"/>
-                                </list>
-                            </field>
-
-                        </page>
-                    </notebook>
-
-                </sheet>
-            </form>
-
         </field>
     </record>
 </odoo>

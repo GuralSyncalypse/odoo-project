@@ -100,6 +100,47 @@ class EstatePropertyUnit(models.Model):
                     "Diện tích tim tường phải lớn hơn hoặc bằng diện tích thông thủy!"
                 )
 
+class EstateProjectPromotion(models.Model):
+    _name = 'estate.project.promotion'
+    _description = 'Ưu đãi dự án'
+    _order = 'sequence, id'
+
+    sequence = fields.Integer(default=10)
+
+    active = fields.Boolean(default=True)
+
+    project_id = fields.Many2one(
+        'estate.project',
+        required=True,
+        ondelete='cascade',
+        string="Dự án"
+    )
+
+    name = fields.Char(
+        required=True,
+        string="Tên ưu đãi"
+    )
+
+    promotion_type = fields.Selection([
+        ('cash', 'Tiền mặt'),
+        ('percent', 'Phần trăm'),
+        ('gift', 'Quà tặng'),
+        ('other', 'Khác'),
+    ], required=True, default='cash')
+
+    cash_amount = fields.Monetary(string="Trị giá")
+    percent_amount = fields.Float(string="Phần trăm ưu đãi", digits=(16,1))
+
+    currency_id = fields.Many2one(
+        'res.currency',
+        default=lambda self: self.env.company.currency_id.id
+    )
+
+    start_date = fields.Date(string="Từ ngày")
+    end_date = fields.Date(string="Đến ngày")
+
+    note = fields.Text(string="Ghi chú")
+
 class EstateProject(models.Model):
     _name = 'estate.project'
     _description = 'Dự án Bất động sản'
@@ -129,12 +170,12 @@ class EstateProject(models.Model):
 
     note = fields.Text(string="Ghi chú")
 
-
     # Các trường liên kết
     phonebook_ids = fields.One2many(
         "sale.phonebook",
         "project_id",
-        string="Data thuộc dự án"
+        string="Data",
+        groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
     )
 
     purchased_customer_ids = fields.Many2many(
@@ -153,10 +194,17 @@ class EstateProject(models.Model):
         string="Khách hàng quan tâm"
     )
 
+    unique_sales_ids = fields.Many2many(
+        'sale.employee',
+        compute='_compute_unique_sales',
+        string='Sales phụ trách'
+    )
+
     sales_ids = fields.One2many(
         'employee.project.rel',
         'project_id',
-        string="Sales phụ trách"
+        string="Sales phụ trách",
+        groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
     )
 
     unit_ids = fields.One2many(
@@ -166,17 +214,21 @@ class EstateProject(models.Model):
         domain=[('state', 'in', ['available', 'resale'])]
     )
 
-    def action_clear_interested_customers(self):
-        for rec in self:
-            rec.interested_customer_ids = [(5, 0, 0)]
+    promotion_ids = fields.One2many(
+        'estate.project.promotion',
+        'project_id',
+        string="Ưu đãi"
+    )
 
-
-    def action_clear_purchased_customers(self):
+    @api.depends('sales_ids.sales_id')
+    def _compute_unique_sales(self):
         for rec in self:
-            rec.purchased_customer_ids = [(5, 0, 0)]
+            rec.unique_sales_ids = rec.sales_ids.mapped('sales_id')
 
 class EmployeeProjectRel(models.Model):
     _name='employee.project.rel'
+    _description = 'Sales Assignment By Project Batch'
+    _order = "project_id, sales_id"
 
     sales_id = fields.Many2one('sale.employee', required=True, domain=[('role_ids.code', '=', 'sales')], string="Sales phụ trách", ondelete='cascade')
     project_id = fields.Many2one(
@@ -197,5 +249,5 @@ class EmployeeProjectRel(models.Model):
 
             if duplicate:
                 raise exceptions.ValidationError(
-                    "Thông tin phẩn bổ này đã tồn tại!"
+                    "Thông tin phân bổ này đã tồn tại!"
                 )
