@@ -155,13 +155,6 @@ class PhoneBook(models.Model):
         groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
     )
 
-    # Định danh
-    batch_id = fields.Many2one(
-        'sale.phonebook.batch',
-        string="Tập dữ liệu",
-        groups="ht_crm.group_ht_executive"
-    )
-
     # Trường cơ bản
     name = fields.Char(string="Chủ thuê bao")
     phone = fields.Char(string="Số điện thoại", size=15, required=True)

@@ -35,23 +35,6 @@
                         string="In phiếu"
                         class="btn-primary"
                         icon="fa-print"/>
-                    <button name="action_confirm_booking"
-                        string="Giữ chỗ"
-                        type="object"
-                        class="btn-secondary"
-                        invisible="state != 'draft'"/>
-
-                    <button name="action_confirm_deposit"
-                            string="Đặt cọc"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state != 'booking'"/>
-
-                    <button name="action_cancel"
-                            string="Hủy"
-                            type="object"
-                            class="btn-danger"
-                            invisible="state == 'cancel'"/>
 
                     <field name="state"
                         widget="statusbar"
@@ -97,8 +80,11 @@
                             <field name="employee_id"
                                 options="{'no_create': False}"/>
 
-                            <field name="customer_id"
-                                options="{'no_create': False}"/>
+                            <field name="customer_id" options="{'no_create': False}"/>
+
+                            <field name="hot_money"/>
+
+                            <field name="plan_id"/>
 
                         </group>
 
@@ -121,11 +107,8 @@
                         <!-- Giá niêm yết -->
                         <field name="listed_price" readonly="1" class="oe_inline" widget="monetary"/>
 
-                        <!-- % CK -->
-                        <field name="discount_percent"/>
-
                         <!-- Tiền CK -->
-                        <field name="discount_amount" readonly="1" widget="monetary"/>
+                        <field name="discount_amount" widget="monetary"/>
 
                         <!-- Giá sau CK -->
                         <field name="price_subtotal" readonly="1" widget="monetary"/>
@@ -159,6 +142,20 @@
                                 <field name="create_date" readonly="1"/>
                                 <field name="write_uid" readonly="1"/>
                                 <field name="write_date" readonly="1"/>
+                            </group>
+                        </page>
+
+                        <page string="Thanh toán">
+                            <group>
+                                <field name="payment_ids">
+                                    <list>
+                                        <field name="name"/>
+                                        <field name="due_date"/>
+                                        <field name="amount" widget="monetary"/>
+                                        <field name="paid_amount" widget="monetary"/>
+                                        <field name="status"/>
+                                    </list>
+                                </field>
                             </group>
                         </page>
 
@@ -250,6 +247,66 @@
 
             </kanban>
 
+        </field>
+    </record>
+
+
+    <record id="view_sale_transaction_payment_form" model="ir.ui.view">
+        <field name="name">sale.transaction.payment.form</field>
+        <field name="model">sale.transaction.payment</field>
+        <field name="arch" type="xml">
+            <form string="Chi Tiết Thanh Toán">
+                <sheet>
+
+                    <!-- Header -->
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="transaction_id"/>
+                        </h2>
+                    </div>
+
+                    <!-- Status -->
+                    <group>
+                        <field name="status" widget="statusbar"
+                            statusbar_visible="pending,paid,overdue"/>
+                    </group>
+
+                    <!-- Main Info -->
+                    <group col="2">
+                        <group string="Thông tin đợt thanh toán">
+
+                            <field name="plan_line_id"/>
+
+                            <field name="sequence" readonly="1"/>
+
+                            <field name="amount"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"/>
+
+                            <field name="paid_amount"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"/>
+
+                        </group>
+
+                        <group string="Thông tin thời gian">
+
+                            <field name="due_type" readonly="1"/>
+
+                            <field name="due_value" readonly="1"/>
+
+                            <field name="base_date"/>
+
+                            <field name="due_date" readonly="1"/>
+
+                        </group>
+                    </group>
+
+                </sheet>
+            </form>
         </field>
     </record>
 </odoo>

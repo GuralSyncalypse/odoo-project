@@ -5,6 +5,7 @@ access_estate_project_system,estate.project.system,model_estate_project,base.gro
 access_estate_property_unit_system,estate.property.unit.system,model_estate_property_unit,base.group_system,1,1,1,1
 access_estate_property_unit_type_system,estate.property.unit.type.system,model_estate_property_unit_type,base.group_system,1,1,1,1
 access_employee_system,sale.employee.system,model_sale_employee,base.group_system,1,1,1,1
+access_employee_project_system,employee.project.rel.system,model_employee_project_rel,base.group_system,1,1,1,1
 access_employee_role_system,sale.employee.role.system,model_sale_employee_role,base.group_system,1,1,1,1
 access_employee_kpi_system,sale.employee.kpi.system,model_sale_employee_kpi,base.group_system,1,1,1,1
 access_transaction_system,sale.transaction.system,model_sale_transaction,base.group_system,1,1,1,1
@@ -56,12 +57,15 @@ access_employee_kpi_bod,sale.employee.kpi.bod,model_sale_employee_kpi,group_ht_b
 access_sale_transaction_bod,sale.transaction.bod,model_sale_transaction,group_ht_board_of_directors,1,0,0,0
 
 access_sale_transaction_ga,sale.transaction.general.admin,model_sale_transaction,group_ht_general_admin,1,1,1,1
+access_sale_transaction_payment_ga,sale.transaction.payment.general.admin,model_sale_transaction_payment,group_ht_general_admin,1,1,1,1
 access_sale_customer_ga,sale.customer.general.admin,model_sale_customer,group_ht_general_admin,1,1,1,1
 access_sale_phonebook_ga,sale.phonebook.general.admin,model_sale_phonebook,group_ht_general_admin,1,0,0,0
 access_sale_employee_ga,sale.employee.general.admin,model_sale_employee,group_ht_general_admin,1,0,0,0
 access_sale_employee_role_ga,sale.employee.role.general.admin,model_sale_employee_role,group_ht_general_admin,1,0,0,0
 access_sale_employee_kpi_ga,sale.employee.kpi.general.admin,model_sale_employee_kpi,group_ht_general_admin,1,1,1,1
 access_estate_project_ga,estate.project.general.admin,model_estate_project,group_ht_general_admin,1,1,1,1
+access_estate_payment_plan_ga,estate.payment.plan.ga,model_estate_payment_plan,group_ht_general_admin,1,1,1,1
+access_estate_payment_plan_line_ga,estate.payment.plan.line.ga,model_estate_payment_plan_line,group_ht_general_admin,1,1,1,1
 access_estate_project_promotion_ga,estate.project.promotion.general.admin,model_estate_project_promotion,group_ht_general_admin,1,1,1,1
 access_estate_property_unit_ga,estate.property.unit.general.admin,model_estate_property_unit,group_ht_general_admin,1,1,1,1
 access_estate_property_unit_type_ga,estate.property.unit.type.general.admin,model_estate_property_unit_type,group_ht_general_admin,1,1,1,1
