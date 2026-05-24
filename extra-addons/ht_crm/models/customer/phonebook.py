@@ -2,6 +2,8 @@ from odoo import models, fields, api, exceptions
 import datetime
 import random
 
+TARGET_PHONE = 50
+
 class PhonebookBatch(models.Model):
     _name = "sale.phonebook.batch"
     _description = "Phone Dataset"
@@ -23,7 +25,7 @@ class PhonebookBatch(models.Model):
         'employee.project.rel',
         'batch_id',
         string="Nhân viên phụ trách",
-        domain=[('sales_id.role_ids.code', '=', 'sales')]
+        domain=[('sales_id.role_id.code', '=', 'sales')]
     )
 
     # Trường phụ
@@ -77,6 +79,21 @@ class PhonebookBatch(models.Model):
                     minutes=batch.rest_time
                 )
 
+    def validate_salesperson_target(self, salesperson):
+        count = self.env['sale.phonebook'].search_count([
+            ('salesperson_id', '=', salesperson.id)
+        ])
+
+        if count >= TARGET_PHONE:
+            return True
+
+    def action_redistribute(self):
+        self.write({'state': 'processing'})
+        available_phones = self.phone_ids.filtered()
+        
+        for phone in available_phones:
+            phone.write({'salesperson_id': False})
+            phone.write({'previous_salesperson_ids': False})
 
     def action_redistribute(self):
         self.write({'state': 'processing'})
@@ -87,7 +104,7 @@ class PhonebookBatch(models.Model):
             phone.write({'previous_salesperson_ids': False})
 
     def action_clean_invalid(self):
-        invalid_phones = self.phone_ids.filtered(lambda p: p.is_hot and p.status == 'invalid')
+        invalid_phones = self.phone_ids.filtered(lambda p: p.status == 'invalid')
 
         for phone in invalid_phones:
             phone.unlink()
@@ -102,7 +119,7 @@ class PhonebookBatch(models.Model):
         self.ensure_one()
         
         employees = self.e_p_rel_ids.mapped('sales_id')
-        phones = self.phone_ids.filtered(lambda p: p.is_hot)
+        phones = self.phone_ids.filtered()
 
         if not employees or not phones:
             return
@@ -134,6 +151,57 @@ class PhonebookBatch(models.Model):
 
             employee = random.choice(available_emps)
 
+            # Đạt 50 số thì skip
+            if self.validate_salesperson_target(employee):
+                continue
+
+            phone.write({'salesperson_id': employee.id})
+            phone.write({'previous_salesperson_ids': [(4, employee.id)]})
+            quota[employee.id] += 1
+            
+            all_blocked = False
+
+        if all_blocked:
+            self.write({'state': 'done'})
+
+    def action_distribute(self):
+        self.ensure_one()
+        
+        employees = self.e_p_rel_ids.mapped('sales_id')
+        phones = self.phone_ids.filtered()
+
+        if not employees or not phones:
+            return
+
+        quota = {emp.id: 0 for emp in employees}
+
+        self.action_clean_invalid()
+        self.action_remove_sales()
+
+        phone_ids = phones.ids
+        random.shuffle(phone_ids)
+
+        all_blocked = True
+        for phone in self.env['sale.phonebook'].browse(phone_ids):
+            filtered = employees.filtered(
+                lambda u: u not in phone.previous_salesperson_ids
+            )
+
+            if not filtered:
+                continue
+
+            available_emps = [
+                e for e in filtered
+                if quota[e.id] < self.chunk_size
+            ]
+            
+            if not available_emps:
+                break  # tất cả full quota
+
+            employee = random.choice(available_emps)
+            if self.validate_salesperson_target(employee):
+                continue
+
             phone.write({'salesperson_id': employee.id})
             phone.write({'previous_salesperson_ids': [(4, employee.id)]})
             quota[employee.id] += 1
@@ -153,13 +221,6 @@ class PhoneBook(models.Model):
         'sale.phonebook.batch',
         string="Tập dữ liệu",
         groups="ht_crm.group_ht_board_of_directors,ht_crm.group_ht_executive"
-    )
-
-    # Định danh
-    batch_id = fields.Many2one(
-        'sale.phonebook.batch',
-        string="Tập dữ liệu",
-        groups="ht_crm.group_ht_executive"
     )
 
     # Trường cơ bản
@@ -182,7 +243,7 @@ class PhoneBook(models.Model):
     salesperson_id = fields.Many2one(
         'sale.employee',
         string="Sales phụ trách",
-        domain=[('role_ids.code', '=', 'sales')],
+        domain=[('role_id.code', '=', 'sales')],
         groups="ht_crm.group_ht_executive, ht_crm.group_ht_general_admin"
     )
 
@@ -201,6 +262,11 @@ class PhoneBook(models.Model):
 
     # Trường xử lý số nóng.
     is_hot = fields.Boolean(string="Nóng?", default=False)
+
+    def get_phone_count_by_salesperson(self, salesperson):
+        return self.env['sale.phonebook'].search_count([
+            ('salesperson_id', '=', salesperson.id)
+        ])
 
     def write(self, vals):
         if not self.env.user.has_group('base.group_system') and not self.env.user.has_group('ht_crm.group_ht_executive'):
