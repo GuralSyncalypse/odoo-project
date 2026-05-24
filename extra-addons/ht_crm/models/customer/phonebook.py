@@ -95,6 +95,14 @@ class PhonebookBatch(models.Model):
             phone.write({'salesperson_id': False})
             phone.write({'previous_salesperson_ids': False})
 
+    def action_redistribute(self):
+        self.write({'state': 'processing'})
+        available_phones = self.phone_ids.filtered(lambda p: p.is_hot)
+        
+        for phone in available_phones:
+            phone.write({'salesperson_id': False})
+            phone.write({'previous_salesperson_ids': False})
+
     def action_clean_invalid(self):
         invalid_phones = self.phone_ids.filtered(lambda p: p.status == 'invalid')
 
