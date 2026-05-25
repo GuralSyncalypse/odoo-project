@@ -153,7 +153,7 @@ class EstateProjectPromotion(models.Model):
 
 class EstateProject(models.Model):
     _name = 'estate.project'
-    _description = 'Dự án'
+    _description = 'Dự án Bất động sản'
 
     # Trường cơ bản
     name = fields.Char(string="Tên dự án", required=True)
