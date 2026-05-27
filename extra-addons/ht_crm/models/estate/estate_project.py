@@ -276,16 +276,6 @@ class EmployeeProjectRel(models.Model):
                     lambda p: p.salesperson_id == rec.sales_id
                 )
             )
-    
-
-    def get_total_phone_received(self, salesperson):
-        rels = self.env['employee.project.rel'].search([
-            ('sales_id', '=', salesperson.id)
-        ])
-
-        return sum(rels.mapped('phone_received'))
-        
-
         
     @api.depends(
         'batch_id.phone_ids',
