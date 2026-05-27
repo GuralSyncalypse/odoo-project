@@ -2,25 +2,19 @@ from odoo import models, fields, api, exceptions
 import datetime
 
 class Employee(models.Model):
-    _name = 'sale.employee'
-    _description = 'Employee Information'
+    _name = 'employee.profile'
+    _description = 'Thông Tin Nhân Viên'
 
     # =========================
     # Basic info
     # =========================
     name = fields.Char(string="Họ và Tên", required=True)
-    code = fields.Char(string="Mã NV")
-    active = fields.Boolean(default=True)
+    code = fields.Char(string="Mã NV", size=5) # HT###
+    active = fields.Boolean(default=True) 
 
     role_id = fields.Many2one(
-        'sale.employee.role',
+        'employee.profile.role',
         string="Chức danh"
-    )
-
-    project_ids = fields.One2many(
-        'employee.project.rel',
-        'sales_id',
-        string="Dự án phụ trách"
     )
 
     # =========================
@@ -49,14 +43,14 @@ class Employee(models.Model):
     # =========================
     # Contact
     # =========================
-    phone = fields.Char(string="SĐT")
+    phone = fields.Char(string="SĐT", size=13)
     email = fields.Char(string="Email")
     address = fields.Text(string="Address")
 
     # =========================
     # Citizen ID
     # =========================
-    identity_number = fields.Char(string="CCCD")
+    identity_number = fields.Char(string="CCCD", size=15)
 
     identity_issue_date = fields.Date(string="Ngày cấp")
 
@@ -74,7 +68,7 @@ class Employee(models.Model):
     # =========================
     bank_name = fields.Char(string="Tên ngân hàng")
 
-    bank_account = fields.Char(string="Số tài khoản")
+    bank_account = fields.Char(string="Số tài khoản", size=20)
 
     bank_branch = fields.Char(string="Chi nhánh")
 
@@ -91,16 +85,6 @@ class Employee(models.Model):
         store=True
     )
 
-    manager_id = fields.Many2one(
-        'sale.employee',
-        string="Quản lý"
-    )
-
-    child_ids = fields.One2many(
-        'sale.employee',
-        'manager_id',
-        string="Nhân viên cấp dưới"
-    )
 
     # =========================
     # System / tracking
@@ -208,9 +192,130 @@ class Employee(models.Model):
         for rec in self:
             rec.birth_year = rec.birthday.year if rec.birthday else False
 
+    # =========================
+    # USER SYNC
+    # =========================
+    def action_sync_user(self):
+        self.ensure_one()
+
+        if not self.env.user.has_group(
+            'ht_crm.group_manage_employee'
+        ):
+            raise exceptions.ValidationError("Bạn không có quyền đồng bộ")
+
+        Users = self.env['res.users'].sudo()
+
+        if self.user_id:
+
+            self.user_id.write({
+                'name': self.name,
+                'login': self.email,
+                'email': self.email,
+            })
+
+        else:
+            existed = Users.search([
+                    ('login', '=', self.email)
+                ], limit=1)
+
+            if existed:
+                self.user_id = existed.id
+                return
+            
+            user = Users.create({
+                'name': self.name,
+                'login': self.email,
+                'email': self.email,
+            })
+
+            self.user_id = user.id
+
+class EmployeeSales(models.Model):
+    _name = 'employee.profile.sales'
+    _description = 'Thông Tin Sales'
+    _rec_name = 'name'
+
+    name = fields.Char(related="employee_id.name" , string="Tên Sales", store=True)
+
+    employee_id = fields.Many2one(
+        "employee.profile",
+        required=True,
+        ondelete="cascade",
+        domain=['|', ('role_id.code', '=', 'sales'), ('role_id.code', '=', 'sales_manager')]
+    )
+
+    manager_id = fields.Many2one(
+        'employee.profile.sales',
+        string="Quản lý"
+    )
+
+    child_ids = fields.One2many(
+        'employee.profile.sales',
+        'manager_id',
+        string="Nhân viên cấp dưới"
+    )
+
+    user_id = fields.Many2one(related="employee_id.user_id", store=True)
+
+    total_received = fields.Integer(string="Tổng Data đã nhận", default=0)
+    total_handled = fields.Integer(string="Tổng Data đã gọi", default=0)
+    max_received = fields.Integer(string="Nhận tối đa", default=50)
+    current_received = fields.Integer(
+        string="Đã nhận",
+        compute="_compute_received",
+        store=True
+    )
+    performance = fields.Float(string="Hiệu suất (%)", compute='_compute_performance', store=True)
+
+    group_ids = fields.One2many(
+        "employee.project.rel",
+        "sales_id",
+    )
+
+    # Actions
+    def action_reset_counter(self):
+        self.total_received = 0
+        self.total_handled = 0
+
+    # Constraints
+    @api.constrains('employee_id')
+    def _check_unique_employee(self):
+        for rec in self:
+            existed = self.search([
+                ('employee_id', '=', rec.employee_id.id),
+                ('id', '!=', rec.id)
+            ], limit=1)
+
+            if existed:
+                raise exceptions.ValidationError(
+                    "Nhân viên đã có hồ sơ sales."
+                )
+
+    @api.constrains('manager_id')
+    def _check_manager(self):
+        for rec in self:
+            if rec.manager_id == rec:
+                raise exceptions.ValidationError("Không thể tự quản lý chính mình.")
+
+    # Computes
+    @api.depends('group_ids.phone_received')
+    def _compute_received(self):
+        for rec in self:
+            rec.current_received = sum(
+                rec.group_ids.mapped('phone_received')
+            )
+
+    @api.depends('total_received', 'total_handled')
+    def _compute_performance(self):
+        for rec in self:
+            if rec.total_received == 0:
+                rec.performance = 0
+                continue
+            rec.performance = (rec.total_handled / rec.total_received) * 100
+
 class EmployeeRole(models.Model):
-    _name = 'sale.employee.role'
-    _description = "Employee Role"
+    _name = 'employee.profile.role'
+    _description = "Thông Tin Chức Danh"
     _order = 'sequence, id'
 
     name = fields.Char(string="Tên vai trò", required=True)
@@ -223,11 +328,46 @@ class EmployeeRole(models.Model):
         ('code_unique', 'unique(code)', 'Mã role phải là duy nhất!')
     ]
 
+class EmployeeSalesLog(models.Model):
+    _name = 'employee.sales.log'
+    _description = 'Sales Statistic Log'
+    _order = 'date desc'
+
+    sales_id = fields.Many2one(
+        'employee.profile.sales',
+        required=True,
+        ondelete='cascade'
+    )
+
+    date = fields.Date(
+        default=fields.Date.today,
+        required=True,
+        string="Ngày tạo"
+    )
+
+    received = fields.Integer(default=0, string="Đã nhận")
+    handled = fields.Integer(default=0, string="Đã xử lý")
+
+    performance = fields.Float(
+        compute='_compute_performance',
+        store=True
+    )
+
+    @api.depends('received', 'handled')
+    def _compute_performance(self):
+        for rec in self:
+            if rec.received:
+                rec.performance = (
+                    rec.handled / rec.received
+                ) * 100
+            else:
+                rec.performance = 0
+
 class EmployeeKPI(models.Model):
-    _name = 'sale.employee.kpi'
+    _name = 'employee.profile.sales.kpi'
     _description = 'Employee KPI'
 
-    employee_id = fields.Many2one('sale.employee', required=True)
+    employee_id = fields.Many2one('employee.profile.sales', required=True)
     month = fields.Integer(string="Tháng", required=True)
     year = fields.Integer(string="Năm", required=True)
     quarter = fields.Integer(string="Quý", compute='_compute_quarter', store=True)
