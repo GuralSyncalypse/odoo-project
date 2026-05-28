@@ -1,6 +1,6 @@
 <odoo>
     <record id="ir_cron_distribute_hot" model="ir.cron">
-        <field name="name">Distribute Hot</field>
+        <field name="name">Distribute Batch</field>
         <field name="model_id" ref="model_sale_phonebook_batch"/>
         <field name="state">code</field>
         <field name="code">model.cron_distribute()</field>
@@ -43,6 +43,12 @@
                             class="oe_highlight"
                             icon="fa-trash"
                             groups="ht_crm.group_ht_executive,base.group_system"/>
+
+                    <button name="action_test_cron"
+                            string="Chạy Cron"
+                            type="object"
+                            class="oe_highlight"
+                            groups="ht_crm.group_ht_executive,base.group_system"/>
                 </header>
                     
                 <sheet>
@@ -55,6 +61,8 @@
                         <field name="chunk_size"/>
                         <field name="distribute_at"/>
                         <field name="rest_time" string="Thời gian nghỉ (phút)"/>
+                        <field name="hot_live_time"/>
+                        <field name="cold_live_time"/>
                     </group>
 
                     <notebook>
@@ -67,6 +75,7 @@
                                     <field name="phone"/>
                                     <field name="salesperson_id"/>
                                     <field name="is_hot"/>
+                                    <field name="given_at"/>
                                 </list>
 
                             </field>
