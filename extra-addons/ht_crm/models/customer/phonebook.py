@@ -39,6 +39,16 @@ class PhonebookBatch(models.Model):
         default=2
     )
 
+    hot_live_time = fields.Integer(
+        string="Thời gian sống số nóng",
+        default=3
+    )
+
+    cold_live_time = fields.Integer(
+        string="Thời gian sống số nguội",
+        default=7
+    )
+
     @api.depends("rest_time")
     def _compute_distribute_at(self):
         now = fields.Datetime.now()
@@ -52,6 +62,7 @@ class PhonebookBatch(models.Model):
                 minutes=rec.rest_time
             )
 
+    # Cron Jobs
     @api.model
     def cron_distribute(self):
         now = fields.Datetime.now()
@@ -63,18 +74,114 @@ class PhonebookBatch(models.Model):
         ])
 
         for batch in batches:
-            if batch.state in ('failed'):
-                return
+            if batch.state == 'failed':
+                continue
 
-            if batch.state in ('done'):
-                batch.action_clean_invalid()
+            if batch.state == 'done':
+                batch.reset_assigned_list()
+                continue
+
+            # Pre-distribution
+            batch.reset_assigned_list()
 
             batch.action_distribute()
 
+            # Post-distribution
             if batch.rest_time:
                 batch.distribute_at = now + datetime.timedelta(
                     minutes=batch.rest_time
                 )
+
+    # Actions
+    def action_test_cron(self):
+        self.cron_distribute()
+
+    def action_redistribute(self):
+        self.write({'state': 'processing'})
+        available_phones = self.phone_ids
+        
+        for phone in available_phones:
+            phone.write({'salesperson_id': False})
+            phone.write({'previous_salesperson_ids': False})
+            phone.write({'given_at': False})
+
+    def action_clean_invalid(self):
+        invalid_phones = self.phone_ids.filtered(lambda p: p.status == 'invalid')
+
+        for phone in invalid_phones:
+            phone.unlink()
+    
+    def action_distribute(self):
+        employees = self.e_p_rel_ids.mapped('sales_id')
+
+        if not employees:
+            return
+
+        # Chỉ lấy phone chưa assign
+        phones = self.phone_ids.filtered(
+            lambda p: not p.salesperson_id
+        )
+
+        if not phones:
+            self.state = 'done'
+            return
+
+        quota = {
+            emp.id: (
+                self.get_interacted_phone_count(emp)
+                + self.get_holding_phone_count(emp)
+            )
+            for emp in employees
+        }
+
+        received_counter = {}
+
+        phone_ids = phones.ids
+        random.shuffle(phone_ids)
+
+        now = fields.Datetime.now()
+
+        for phone in self.env['sale.phonebook'].browse(phone_ids):
+            filtered = employees.filtered(
+                lambda u: u not in phone.previous_salesperson_ids
+            )
+
+            if not filtered:
+                continue
+
+            available_emps = [
+                e for e in filtered
+                if quota[e.id] < self.chunk_size
+            ]
+            
+            if not available_emps:
+                continue  # tất cả full quota
+
+            employee = random.choice(available_emps)
+            if self.validate_salesperson_target(employee):
+                continue
+        
+            
+            phone.write({
+                'given_at': now,
+                'salesperson_id': employee.id,
+                'previous_salesperson_ids': [(4, employee.id)],
+            })
+            quota[employee.id] += 1
+
+            # Lifetime statistic
+            employee.total_received += 1
+
+            # Batch statistic
+            received_counter[employee.id] = (
+                received_counter.get(employee.id, 0) + 1
+            )
+
+        if received_counter:
+            self.update_sales_log(received_counter)
+
+        if self.is_finish_distribution():
+            self.state = 'done'
 
     def update_sales_log(self, received_counter : dict) -> None:
         today = fields.Date.today()
@@ -102,88 +209,97 @@ class PhonebookBatch(models.Model):
 
         if count >= salesperson.max_received:
             return True
+        return False
 
-    def action_redistribute(self):
-        self.write({'state': 'processing'})
-        available_phones = self.phone_ids
-        
-        for phone in available_phones:
-            phone.write({'salesperson_id': False})
-            phone.write({'previous_salesperson_ids': False})
+    def get_unhandled_phones(self, salesperson):
+        handled_phone_ids = self.env[
+            'sale.phonebook.log'
+        ].search([
+            ('salesperson_id', '=', salesperson.id)
+        ]).mapped('phone_id.id')
 
-    def action_clean_invalid(self):
-        invalid_phones = self.phone_ids.filtered(lambda p: p.status == 'invalid')
+        return self.env['sale.phonebook'].search([
+            ('salesperson_id', '=', salesperson.id),
+            ('id', 'not in', handled_phone_ids)
+        ])
+    
+    def reset_assigned_list(self):
 
-        for phone in invalid_phones:
-            phone.unlink()
+        now = fields.Datetime.now()
 
-    def action_remove_sales(self):
-        available_phones = self.phone_ids
-        
-        for phone in available_phones:
-            phone.write({'salesperson_id': False})
+        def is_expired(phone):
 
-    def action_distribute(self):
-        self.ensure_one()
-        
-        employees = self.e_p_rel_ids.mapped('sales_id')
-        phones = self.phone_ids
+            if not phone.given_at:
+                return True
 
-        if not employees or not phones:
-            return
-
-        quota = {emp.id: 0 for emp in employees}
-
-        # Track statistic
-        received_counter = {}
-
-        self.action_clean_invalid()
-        self.action_remove_sales()
-
-        phone_ids = phones.ids
-        random.shuffle(phone_ids)
-
-        all_blocked = True
-        for phone in self.env['sale.phonebook'].browse(phone_ids):
-            filtered = employees.filtered(
-                lambda u: u not in phone.previous_salesperson_ids
+            live_time = (
+                self.hot_live_time
+                if phone.is_hot
+                else self.cold_live_time
             )
 
-            if not filtered:
-                continue
-
-            available_emps = [
-                e for e in filtered
-                if quota[e.id] < self.chunk_size
-            ]
-            
-            if not available_emps:
-                break  # tất cả full quota
-
-            employee = random.choice(available_emps)
-            if self.validate_salesperson_target(employee):
-                continue
-
-            phone.write({'salesperson_id': employee.id})
-            phone.write({'previous_salesperson_ids': [(4, employee.id)]})
-            quota[employee.id] += 1
-
-
-            # Lifetime counter
-            employee.total_received += 1
-
-            # Statistic counter
-            received_counter[employee.id] = (
-                received_counter.get(employee.id, 0) + 1
+            expired_time = (
+                phone.given_at
+                + datetime.timedelta(minutes=live_time)
             )
-            
-            all_blocked = False
 
+            return now >= expired_time
 
-        self.update_sales_log(received_counter)
+        phones = self.phone_ids.filtered(
+            lambda p:
+                p.salesperson_id
+                and not p.has_interaction_since_given
+                and is_expired(p)
+        )
 
-        if all_blocked:
-            self.write({'state': 'done'})
+        if phones:
+            phones.write({
+                'salesperson_id': False,
+                'given_at': False,
+            })
+
+    def get_interacted_phone_count(self, salesperson):
+        return self.env['sale.phonebook'].search_count([
+            ('batch_id', '=', self.id),
+            ('salesperson_id', '=', salesperson.id),
+            ('has_interaction_since_given', '=', True)
+        ])
+    
+    def get_holding_phone_count(self, salesperson):
+        now = fields.Datetime.now()
+
+        phones = self.env['sale.phonebook'].search([
+            ('batch_id', '=', self.id),
+            ('salesperson_id', '=', salesperson.id),
+            ('has_interaction_since_given', '=', False),
+            ('given_at', '!=', False),
+        ])
+
+        def is_holding(phone):
+            live_time = (
+                self.hot_live_time
+                if phone.is_hot
+                else self.cold_live_time
+            )
+
+            expired_time = (
+                phone.given_at
+                + datetime.timedelta(minutes=live_time)
+            )
+
+            return now < expired_time
+
+        return len(phones.filtered(is_holding))
+
+    def is_finish_distribution(self):
+        phones = self.phone_ids.filtered(
+            lambda p:
+                len(p.previous_salesperson_ids)
+                == len(self.e_p_rel_ids)
+        )
+
+        return len(phones) == len(self.phone_ids)
+    
 
 class PhoneBook(models.Model):
     _name = 'sale.phonebook'
@@ -216,8 +332,6 @@ class PhoneBook(models.Model):
     salesperson_id = fields.Many2one(
         'employee.profile.sales',
         string="Sales phụ trách",
-        domain=[('role_id.code', '=', 'sales')],
-        groups="ht_crm.group_ht_executive, ht_crm.group_ht_general_admin"
     )
 
     previous_salesperson_ids = fields.Many2many(
@@ -236,93 +350,154 @@ class PhoneBook(models.Model):
     # Trường xử lý số nóng.
     is_hot = fields.Boolean(string="Nóng?", default=False)
 
+    # Thời gian
+    given_at = fields.Datetime(string="Giao vào lúc")
+    has_interaction_since_given = fields.Boolean(
+        compute='_compute_has_interaction_since_given',
+        store=True,
+        index=True
+    )
+
+    last_interaction_at = fields.Datetime(
+        string="Tương tác cuối"
+    )
+
+    last_interaction_by = fields.Many2one(
+        'employee.profile.sales',
+        string="Người xử lý cuối"
+    )
+
     def get_phone_count_by_salesperson(self, salesperson):
         return self.env['sale.phonebook'].search_count([
             ('salesperson_id', '=', salesperson.id)
         ])
 
-    def write(self, vals):
-        # =========================
-        # Permission check
-        # =========================
+    @api.depends(
+        'given_at',
+        'salesperson_id',
+        'last_interaction_at',
+        'last_interaction_by'
+    )
+    def _compute_has_interaction_since_given(self):
+        for rec in self:
+            rec.has_interaction_since_given = bool(
+                rec.given_at
+                and rec.last_interaction_at
+                and rec.last_interaction_at >= rec.given_at
+                and rec.last_interaction_by == rec.salesperson_id
+            )
+
+    def _check_write_permission(self, vals):
         if (
-            not self.env.user.has_group('base.group_system')
-            and not self.env.user.has_group('ht_crm.group_ht_executive')
+            self.env.user.has_group('base.group_system')
+            or self.env.user.has_group('ht_crm.group_ht_executive')
         ):
+            return
 
-            allowed_fields = ['note', 'status']
+        allowed_fields = [
+            'note',
+            'batch_id',
+            'status',
+            'has_interaction_since_given',
+            'last_interaction_at',
+            'last_interaction_by'
+        ]
 
-            forbidden_fields = [
-                field for field in vals
-                if field not in allowed_fields
-            ]
+        forbidden_fields = [
+            field for field in vals
+            if field not in allowed_fields
+        ]
 
-            if forbidden_fields:
-                raise exceptions.UserError(
-                    "Bạn chỉ được sửa ghi chú và trạng thái."
-                )
+        if forbidden_fields:
+            raise exceptions.UserError(
+                "Bạn chỉ được sửa ghi chú và trạng thái."
+            )
 
-        # =========================
-        # Check reclaim
-        # =========================
-        if self.env.user.has_group('ht_crm.group_ht_user'):
+    def _check_reclaim(self, vals):
+        if not self.env.user.has_group('ht_crm.group_ht_user'):
+            return
 
-            person = vals.get('salesperson_id')
+        person = vals.get('salesperson_id')
 
-            if person:
+        if not person:
+            return
 
-                salesperson = self.env[
-                    'employee.profile.sales'
-                ].browse(person)
+        salesperson = self.env[
+            'employee.profile.sales'
+        ].browse(person)
 
-                if self.env.user != salesperson.user_id:
-                    raise exceptions.UserError(
-                        "Số này đã bị thu hồi."
-                    )
+        if self.env.user != salesperson.user_id:
+            raise exceptions.UserError(
+                "Số này đã bị thu hồi."
+            )
+        
+    def _update_interaction_tracking(self, old_status):
+        now = fields.Datetime.now()
 
-        # Track old status
+        Log = self.env['employee.sales.log']
+        handled_counter = {}
+
+        for rec in self:
+
+            is_interacted = (
+                old_status.get(rec.id) == 'new'
+                and rec.status != 'new'
+            )
+
+            update_vals = {
+                'last_interaction_at': now,
+                'last_interaction_by': rec.salesperson_id.id,
+            }
+
+            if is_interacted:
+                update_vals['batch_id'] = False
+
+                if rec.salesperson_id:
+                    emp_id = rec.salesperson_id.id
+                    handled_counter[emp_id] = handled_counter.get(emp_id, 0) + 1
+
+            rec.with_context(skip_tracking=True).sudo().write(update_vals)
+
+        # update log handled
+        if handled_counter:
+
+            today = fields.Date.today()
+
+            for employee_id, qty in handled_counter.items():
+
+                log = Log.sudo().search([
+                    ('sales_id', '=', employee_id),
+                    ('date', '=', today)
+                ], limit=1)
+
+                if not log:
+                    log = Log.sudo().create({
+                        'sales_id': employee_id,
+                        'date': today,
+                    })
+
+                log.sudo().write({
+                    'handled': log.handled + qty,
+                })
+
+    def write(self, vals):
+        self._check_write_permission(vals)
+        self._check_reclaim(vals)
+
         old_status = {
             rec.id: rec.status
             for rec in self
         }
 
+        tracked_changed = any(
+            field in vals
+            for field in ['status', 'note']
+        )
+
         res = super().write(vals)
 
-        # =========================
-        # Update handled statistic
-        # =========================
-        handled_status = ['contacted', 'callback']
-
-        if 'status' in vals:
-
-            Log = self.env['employee.sales.log']
-
-            for rec in self:
-
-                old = old_status.get(rec.id)
-                new = rec.status
-
-                # Chỉ tính khi chuyển từ status khác
-                if (
-                    old not in handled_status
-                    and new in handled_status
-                    and rec.salesperson_id
-                ):
-
-                    today = fields.Date.today()
-
-                    log = Log.search([
-                        ('sales_id', '=', rec.salesperson_id),
-                        ('date', '=', today)
-                    ], limit=1)
-
-                    if not log:
-                        log = Log.create({
-                            'sales_id': rec.salesperson_id,
-                            'date': today,
-                        })
-
-                    log.handled += 1
+        if tracked_changed:
+            self._update_interaction_tracking(old_status)
 
         return res
 
@@ -371,34 +546,6 @@ class PhoneBook(models.Model):
                     f"Số điện thoại đã tồn tại "
                     f"trong dự án: {existing.project_id.name}"
                 )
-
-    def action_reset_number(self):
-        self.ensure_one()
-        self.write({'salesperson_id': ""})
-        self.write({'previous_salesperson_ids': [(5, 0, 0)]})
-
-    # log_ids = fields.One2many(
-    #     'sale.phonebook.log',
-    #     'phonebook_id',
-    #     string="Logs"
-    # )
-
-    # def write(self, vals):
-    #     for rec in self:
-    #         old_status = rec.status
-
-    #         res = super(PhoneBook, rec).write(vals)
-
-    #         # Log when status changed
-    #         if 'status' in vals and old_status != vals['status']:
-    #             self.env['sale.phonebook.log'].create({
-    #                 'phonebook_id': rec.id,
-    #                 'old_status': old_status,
-    #                 'new_status': vals['status'],
-    #                 'note': vals.get('note', ''),
-    #             })
-
-    #     return True
 
 
 class PhonebookStatusWizard(models.TransientModel):
