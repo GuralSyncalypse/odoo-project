@@ -220,11 +220,15 @@
                             <group string="Lịch sử tương tác">
                                 <field name="given_at" readonly="True"/>
                                 <field name="last_interaction_at" readonly="True"/>
+                                <field name="salesperson_id" readonly="True"/>
                             </group>
                         </group>
                         <notebook>
-                            <page string="Nhật ký cuộc gọi / Ghi chú">
-                                <field name="note" placeholder="Nhập nội dung cuộc gọi, nhu cầu khách hàng tại đây..."/>
+                            <page string="Lịch sử Sales">
+                                <field name="previous_salesperson_ids" widget="many2many_tags"/>
+                            </page>
+                            <page string="Ghi chú hệ thống">
+                                <field name="note"/>
                             </page>
                         </notebook>
                     </sheet>
