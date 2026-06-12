@@ -220,11 +220,11 @@
                             <group string="Lịch sử tương tác">
                                 <field name="given_at" readonly="True"/>
                                 <field name="last_interaction_at" readonly="True"/>
-                                <field name="salesperson_id" readonly="True"/>
+                                <field name="salesperson_id" readonly="True" groups="ht_crm.group_ht_leader"/>
                             </group>
                         </group>
                         <notebook>
-                            <page string="Lịch sử Sales">
+                            <page string="Lịch sử Sales" groups="ht_crm.group_ht_leader">
                                 <field name="previous_salesperson_ids" widget="many2many_tags"/>
                             </page>
                             <page string="Ghi chú hệ thống">
