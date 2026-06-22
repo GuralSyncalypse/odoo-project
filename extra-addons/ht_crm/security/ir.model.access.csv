@@ -7,8 +7,6 @@ access_phonebook_user,sale.phonebook.user,model_sale_phonebook,group_ht_collabor
 access_customer_user,sale.customer.user,model_sale_customer,group_ht_collaborator_user,1,1,1,0
 access_phonebook_status_wizard_user,sale.phonebook.status.wizard.user,model_sale_phonebook_status_wizard,group_ht_collaborator_user,1,1,1,1
 
-# --- QUYỀN CHỈ DÀNH RIÊNG CHO SALES CHÍNH THỨC ---
-access_customer_user,sale.customer.user,model_sale_customer,group_ht_sales_user,1,1,1,0
 access_employee_profile_user,employee.profile.user,model_employee_profile,group_ht_sales_user,1,0,0,0
 access_employee_profile_sales_user,employee.profile.user.sa,model_employee_profile_sales,group_ht_sales_user,1,0,0,0
 access_estate_project_promotion_user,estate.project.promotion.user,model_estate_project_promotion,group_ht_sales_user,1,0,0,0
