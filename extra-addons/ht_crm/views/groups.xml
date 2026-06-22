@@ -49,9 +49,16 @@
     ========================= -->
 
     <!-- User cơ bản -->
-    <record id="group_ht_sales_user" model="res.groups">
-        <field name="name">Sales</field>
+    <!-- 1. Nhóm CTV: Chỉ có quyền cơ bản của hệ thống -->
+    <record id="group_ht_collaborator_user" model="res.groups">
+        <field name="name">Cộng tác viên</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <!-- 2. Nhóm Sales: Kế thừa CTV (để có quyền Salesphone) + Thêm quyền riêng của Sales -->
+    <record id="group_ht_sales_user" model="res.groups">
+        <field name="name">Sales (Toàn quyền Sales)</field>
+        <field name="implied_ids" eval="[(4, ref('ht_crm.group_ht_collaborator_user'))]"/>
     </record>
 
     <!-- Trưởng phòng (kế thừa User) -->
