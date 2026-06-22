@@ -224,13 +224,14 @@ class PhonebookBatch(models.Model):
             log.received += quantity
 
     def validate_salesperson_target(self, salesperson):
+        today = fields.Date.today()
+        
         count = self.env['sale.phonebook'].search_count([
-            ('salesperson_id', '=', salesperson.id)
+            ('salesperson_id', '=', salesperson.id),
+            ('given_at', '>=', today)  # Lọc từ đầu ngày hôm nay đến hiện tại
         ])
 
-        if count >= salesperson.max_received:
-            return True
-        return False
+        return count >= salesperson.max_received
 
     def get_unhandled_phones(self, salesperson):
         handled_phone_ids = self.env[
