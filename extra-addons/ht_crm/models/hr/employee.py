@@ -289,17 +289,38 @@ class EmployeeSales(models.Model):
         string="Nhân viên cấp dưới"
     )
 
+    # Trường Quan hệ liên kết đến bảng Log (One2many)
+    log_ids = fields.One2many(
+        'employee.sales.log', 
+        'sales_id', 
+        string="Nhật ký Sales"
+    )
+
     user_id = fields.Many2one(related="employee_id.user_id", store=True)
 
-    total_received = fields.Integer(string="Tổng Data đã nhận", default=0)
-    total_handled = fields.Integer(string="Tổng Data đã gọi", default=0, compute='_compute_handled')
+    
     max_received = fields.Integer(string="Nhận tối đa", default=50)
     current_received = fields.Integer(
-        string="Đã nhận",
+        string="Đang giữ",
         compute="_compute_received",
         store=True
     )
-    performance = fields.Float(string="Hiệu suất (%)", compute='_compute_performance', store=True)
+    
+    total_received = fields.Integer(
+        string="Tổng nhận", 
+        compute='_compute_sales_totals', 
+        store=True
+    )
+    total_handled = fields.Integer(
+        string="Tổng xử lý", 
+        compute='_compute_sales_totals', 
+        store=True
+    )
+    performance = fields.Float(
+        string="Hiệu suất tổng (%)", 
+        compute='_compute_sales_totals', 
+        store=True
+    )
 
     group_ids = fields.One2many(
         "employee.project.rel",
@@ -387,40 +408,21 @@ class EmployeeSales(models.Model):
                 rec.group_ids.mapped('phone_received')
             )
 
-    @api.depends(
-        'group_ids.batch_id.phone_ids',
-        'group_ids.batch_id.phone_ids.salesperson_id',
-        'group_ids.batch_id.phone_ids.status'
-    )
-    def _compute_handled(self):
-        """
-        Tính tổng số lượng số điện thoại ĐÃ XỬ LÝ bởi nhân viên kinh doanh (Salesperson).
-        
-        TIÊU CHÍ ĐÁNH GIÁ MỘT SỐ ĐÃ XỬ LÝ (STATUS):
-        - 'contacted': Đã liên hệ trực tiếp với khách hàng.
-        - 'callback' : Khách hẹn gọi lại sau.
-        - 'invalid'  : Số không hợp lệ (Số sai, thuê bao, không có thực...) nhưng sales đã kiểm tra và gắn nhãn.
-        
-        Ghi chú: Các trạng thái khác (ví dụ: 'new' - mới nhận, 'calling' - đang gọi) sẽ KHÔNG được tính là đã xử lý.
-        """
-        phone_model = self.env['sale.phonebook']
-
+    @api.depends('log_ids.received', 'log_ids.handled')
+    def _compute_sales_totals(self):
         for rec in self:
-            # Đếm số lượng bản ghi trong danh bạ thỏa mãn đồng thời 2 điều kiện:
-            # 1. Thuộc quyền quản lý của nhân viên này (salesperson_id == rec.id)
-            # 2. Trạng thái nằm trong nhóm các trạng thái đã hoàn thành xử lý
-            rec.total_handled = phone_model.search_count([
-                ('salesperson_id', '=', rec.id),
-                ('status', 'in', ['contacted', 'callback', 'invalid'])
-            ])
+            # 1. Tính tổng số lượng nhận và xử lý từ tất cả các log của nhân viên này
+            total_rec = sum(log.received for log in rec.log_ids)
+            total_han = sum(log.handled for log in rec.log_ids)
+            
+            rec.total_received = total_rec
+            rec.total_handled = total_han
 
-    @api.depends('total_received', 'total_handled')
-    def _compute_performance(self):
-        for rec in self:
-            if rec.total_received == 0:
-                rec.performance = 0
-                continue
-            rec.performance = (rec.total_handled / rec.total_received) * 100
+            # 2. Tính hiệu suất tổng dựa trên tổng số lượng thu được
+            if total_rec > 0:
+                rec.performance = (total_han / total_rec) * 100
+            else:
+                rec.performance = 0.0
 
 
 class EmployeeRole(models.Model):

@@ -46,26 +46,20 @@
                     <!-- Stats -->
                     <div class="oe_button_box" name="button_box">
 
-                        <button class="oe_stat_button" type="object" icon="fa-download">
-                            <div class="o_stat_info">
-                                <span class="o_stat_value"><field name="total_received"/></span>
-                                <span class="o_stat_text">Tổng nhận</span>
-                            </div>
-                        </button>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" type="object" icon="fa-download">
+                                <field name="total_received" widget="statinfo" string="Tổng nhận"/>
+                            </button>
 
-                        <button class="oe_stat_button" type="object" icon="fa-folder-open">
-                            <div class="o_stat_info">
-                                <span class="o_stat_value"><field name="current_received"/></span>
-                                <span class="o_stat_text">Đang giữ</span>
-                            </div>
-                        </button>
+                            <button class="oe_stat_button" type="object" icon="fa-phone">
+                                <field name="total_handled" widget="statinfo" string="Tổng xử lý"/>
+                            </button>
 
-                        <button class="oe_stat_button" type="object" icon="fa-phone">
-                            <div class="o_stat_info">
-                                <span class="o_stat_value"><field name="total_handled"/></span>
-                                <span class="o_stat_text">Đã xử lý</span>
-                            </div>
-                        </button>
+                            <button class="oe_stat_button" type="object" icon="fa-folder-open">
+                                <field name="current_received" widget="statinfo" string="Đang giữ"/>
+                            </button>
+                            
+                        </div>
 
                     </div>
 
