@@ -275,7 +275,7 @@ class EmployeeSales(models.Model):
         "employee.profile",
         required=True,
         ondelete="cascade",
-        domain=['|', ('role_id.code', '=', 'sales'), ('role_id.code', '=', 'sales_manager')]
+        domain=[('role_id.code', 'in', ['sales', 'sales_manager', 'collaborator'])]
     )
 
     manager_id = fields.Many2one(
@@ -310,7 +310,8 @@ class EmployeeSales(models.Model):
     # Actions
     def action_reset_counter(self):
         self.total_received = 0
-        self.total_handled = 0   
+        self.total_handled = 0
+        self.current_received = 0
 
     @api.model
     def get_views(self, views, options=None):
